@@ -99,24 +99,20 @@ int main(int argc, char* argv[]) {
 	//init knotList
 	for (int i = 0; i <= N+K+1; i++) {	//to make it clamped we need to set beg (K) digits and end (K) digits to 0 and 1.
 		knotList[i] = 1.0f*(i/(N+K+1.0f));
-		/*	//uncomment for clamped
+		///*	//uncomment for clamped
 		if (i < K-1) {
-			k[i] = 0.0f;
+			knotList[i] = 0.0f;
 		} else if (i > N+2) {
-			k[i] = 1.0f;
+			knotList[i] = 1.0f;
 		} else {
 			//k[i] = 1.0f*(i/(N+K+1.0f));
-			k[i] = 1.0f*((i-K+2)/(float)((N+K+5)-(2*K)));
+			knotList[i] = 1.0f*((i-K+2)/(float)((N+K+5)-(2*K)));
 			printf("val is %d\n", 1+i-K);
 		}
-		*/
-		//printf("%f\n", k[i]);
+		//*/
+		//printf("%f\n", knotList[i]);
 	}
-	
-	//init sdl
-	if (SDL_Init(SDL_INIT_EVERYTHING) == 0)
-	{
-		/*
+	/*
 			function to create a window and default renderer.
 			int SDL_CreateWindowAndRenderer(int width
 										,int height
@@ -125,6 +121,12 @@ int main(int argc, char* argv[]) {
 										,SDL_Renderer** renderer)
 			return 0 on success and -1 on error
 		*/
+	
+	//init sdl
+	///*
+	if (SDL_Init(SDL_INIT_EVERYTHING) == 0)
+	{
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create window and renderer: %s", SDL_GetError());
 		if(SDL_CreateWindowAndRenderer(640, 480, 0, &window, &renderer) == 0)
 		{
 			SDL_bool done = SDL_FALSE;
@@ -148,52 +150,30 @@ int main(int argc, char* argv[]) {
 					flagDrawn = 1;
 				}
 				//could make this a for loop
-				/*grey color circle to encircle control Point P0*/
-				SDL_SetRenderDrawColor(renderer, 128, 128, 128, SDL_ALPHA_OPAQUE);
-				circleBres(x[0] , y[0] , 8) ;
-
-				/*Red Line between control Point P0 & P1*/
-				SDL_SetRenderDrawColor(renderer, 255, 0, 0, SDL_ALPHA_OPAQUE);
-				SDL_RenderDrawLine(renderer , x[0] , y[0] , x[1] , y[1]) ;
-
-				/*grey color circle to encircle control Point P1*/
-				SDL_SetRenderDrawColor(renderer, 128, 128, 128, SDL_ALPHA_OPAQUE);
-				circleBres(x[1] , y[1] , 8) ;
-
-				/*Red Line between control Point P1 & P2*/
-				SDL_SetRenderDrawColor(renderer, 255, 0, 0, SDL_ALPHA_OPAQUE);
-				SDL_RenderDrawLine(renderer , x[1] , y[1] , x[2] , y[2]) ;
-
-				/*grey color circle to encircle control Point P2*/
-				SDL_SetRenderDrawColor(renderer, 128, 128, 128, SDL_ALPHA_OPAQUE);
-				circleBres(x[2] , y[2] , 8) ;
-
-				/*Red Line between control Point P2 & P3*/
-				SDL_SetRenderDrawColor(renderer, 255, 0, 0, SDL_ALPHA_OPAQUE);
-				SDL_RenderDrawLine(renderer , x[2] , y[2] , x[3] , y[3]) ;
-
-				/*grey color circle to encircle control Point P3*/
-				SDL_SetRenderDrawColor(renderer, 128, 128, 128, SDL_ALPHA_OPAQUE);
-				circleBres(x[3] , y[3] , 8) ;
-				
-				//4th line
-				SDL_SetRenderDrawColor(renderer, 255, 0, 0, SDL_ALPHA_OPAQUE);
-				SDL_RenderDrawLine(renderer , x[3] , y[3] , x[4] , y[4]) ;
-				
-				//5th one.
-				SDL_SetRenderDrawColor(renderer, 128, 128, 128, SDL_ALPHA_OPAQUE);
-				circleBres(x[4] , y[4] , 8) ;
+				for (int f = 0; f < i; f++) {
+					SDL_SetRenderDrawColor(renderer, 128, 128, 128, SDL_ALPHA_OPAQUE);
+					circleBres(x[f] , y[f] , 8);
+					if (f >= 1) {
+						SDL_SetRenderDrawColor(renderer, 255, 0, 0, SDL_ALPHA_OPAQUE);
+						SDL_RenderDrawLine(renderer , x[f-1] , y[f-1] , x[f] , y[f]) ;
+					}
+				}
+				/*
+				for (int f = 1; f < i; f++) {
+					SDL_SetRenderDrawColor(renderer, 255, 0, 0, SDL_ALPHA_OPAQUE);
+					SDL_RenderDrawLine(renderer , x[f-1] , y[f-1] , x[f] , y[f]) ;
+				}
+				*/
 
 				//Polling SDL events
 				if (SDL_PollEvent(&event)) {
-					/* if window cross button clicked then quit from window */
+					//if window cross button clicked then quit from window
 					if (event.type == SDL_QUIT) {
 						done = SDL_TRUE;
 					}
-					/*Mouse Button is Down */
+					//Mouse Button is Down
 					if(event.type == SDL_MOUSEBUTTONDOWN) {
-						/*If left mouse button down then store
-						that point as control point*/
+						//If left mouse button down then store that point as control point
 						if(event.button.button == SDL_BUTTON_LEFT) {
 							//store only N points
 							if(i < N) {
@@ -206,41 +186,37 @@ int main(int argc, char* argv[]) {
 							}
 						}
 					}
-					/*Mouse is in motion*/
+					//Mouse is in motion
 					if(event.type == SDL_MOUSEMOTION) {
-						/*get x and y positions from motion of mouse*/
+						//get x and y positions from motion of mouse
 						xnew = event.motion.x ;
 						ynew = event.motion.y ;
 
 						int j;
 
-						/* change coordinates of control point
-						after bezier curve has been drawn */
+						//change coordinates of control point after bezier curve has been drawn
 						if(flagDrawn == 1) {
 							for(j = 0 ; j < i; j++) {
-								/*Check mouse position if in b/w circle then
-								change position of that control point to mouse new
-								position which are coming from mouse motion*/
+								//Check mouse position if in b/w circle then change position of that control point to mouse new position which are coming from mouse motion
 								if((float)sqrt(abs(xnew-x[j]) * abs(xnew-x[j])
 									+ abs(ynew-y[j]) * abs(ynew-y[j])) < 8.0) {
-									/*change coordinate of jth control point*/
+									//change coordinate of jth control point
 									x[j] = xnew ;
 									y[j] = ynew ;
 									printf("Changed Control Point(P%d):(%d,%d)\n", j, xnew, ynew) ;
 								}
 							}
 						}
-						/*updating mouse positions to positions
-						coming from motion*/
+						//updating mouse positions to positions coming from motion
 						mousePosX = xnew ;
 						mousePosY = ynew ;
 					}
 				}
-				/*show the window*/
+				//show the window
 				SDL_RenderPresent(renderer);
 			}
 		}
-		/*Destroy the renderer and window*/
+		//Destroy the renderer and window
 		if (renderer) {
 			SDL_DestroyRenderer(renderer);
 		}
@@ -248,7 +224,9 @@ int main(int argc, char* argv[]) {
 			SDL_DestroyWindow(window);
 		}
 	}
-	/*clean up SDL*/
+	//clean up SDL
 	SDL_Quit();
+	//*/
+	printf("Bye!\n");
 	return 0;
 }
