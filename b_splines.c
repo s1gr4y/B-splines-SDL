@@ -9,8 +9,17 @@ SDL_Window* window = NULL;
 SDL_Renderer* renderer = NULL;
 int mousePosX, mousePosY;
 int xnew, ynew;
-#define N 5	//points
-#define K 2	//deg + 1 so 3 == 4 (cubic), 2 == 3 (quad), and 1 == 2  (linear)
+//m == n + p + 1
+//m == 7 + 3 + 1 == 11
+//p == m - n - 1
+//p == 11 - 7 - 1 == 3
+//where n-1 points (ex N of 8 == 7) (ex P (here it is K) of 3)
+//we need n + p + 2 knots (7+3+2 == 12)
+//where p deg is 3
+//for clamped, first and last p+1 knots need to be the same i.e beg == 0 end == 1
+//for k == 3, 0-3 == 0, 8-11 == 1
+#define N 10	//points
+#define K 3	//deg // ignore this: + 1 so 3 == 4 (cubic), 2 == 3 (quad), and 1 == 2  (linear)
 float knotList[N+K+1] = {0.0f};	//size of k+n+1 == 4+4+1 == 9 (ex)
 
 float BasisFunc(int i, int deg, float t, float* knots) {
@@ -21,6 +30,14 @@ float BasisFunc(int i, int deg, float t, float* knots) {
 	}
 	//printf("knot at %d is %f\n", i, knots[i]);
 	//need to keep recursing
+	//need this chain to prevent divide by 0 default
+	if (knots[i+deg+1] - knots[i+1] <= 0.0f && knots[i+deg] - knots[i] <= 0.0f) {
+		return 0.0f;
+	} else if (knots[i+deg+1] - knots[i+1] >= 0.0f && knots[i+deg] - knots[i] <= 0.0f){
+		return ((knots[i+deg+1]-t)*BasisFunc(i+1, deg-1, t, knots))/(knots[i+deg+1] - knots[i+1]);
+	} else if (knots[i+deg+1] - knots[i+1] <= 0.0f && knots[i+deg] - knots[i] >= 0.0f) {
+		return (((t-knots[i])*BasisFunc(i, deg-1, t, knots))/(knots[i+deg] - knots[i]));
+	}
 	return (((t-knots[i])*BasisFunc(i, deg-1, t, knots))/(knots[i+deg] - knots[i])) +
 	(((knots[i+deg+1]-t)*BasisFunc(i+1, deg-1, t, knots))/(knots[i+deg+1] - knots[i+1]));
 	
@@ -29,15 +46,18 @@ float BasisFunc(int i, int deg, float t, float* knots) {
 float Interpolate(int* p, float t, int size, int deg, float* knots) {
 	float sum = 0.0f;
 	for (int i = 0; i < size; i++) {
-		sum += p[i] * BasisFunc(i, deg, t, knots);
-		if (t <= 0.0) {
-			printf("p[%d] is %d\n", i, p[i]);
-			printf("BasisFunc is %d\n", BasisFunc(i, deg, t, knots));
-		}
+		//float itmv = p[i] * BasisFunc(i, deg, t, knots);
+		//if (itmv != INFINITY && itmv != NAN) {
+			sum += p[i] * BasisFunc(i, deg, t, knots);
+		//}
+		//if (t <= 0.0) {
+			//printf("p[%d] is %d\n", i, p[i]);
+			//printf("BasisFunc is %f\n", itmv);
+		//}
 	}
-	if (t <= 0.0) {
-		printf("sum is %f\n", sum);
-	}
+	//if (t <= 0.0) {
+		//printf("sum is %f\n", sum);
+	//}
 	return sum;
 }
 
@@ -83,7 +103,7 @@ void BSplines(int x[], int y[])
 {
 	double xu = 0.0 , yu = 0.0 , u = 0.0;
 	int i = 0 ;
-	for(u = knotList[K] ; u <= knotList[N] ; u += 0.0001)	//t_(k-1) <= t <= t_(n+1)
+	for(u = knotList[K]; u <= knotList[N]; u += 0.0001)	//t_(k-1) <= t <= t_(n+1)
 	{
 		/* //for 4 point bezier curve
 		xu = pow(1-u,3)*x[0]+3*u*pow(1-u,2)*x[1]+3*pow(u,2)*(1-u)*x[2]+pow(u,3)*x[3];
@@ -97,20 +117,22 @@ void BSplines(int x[], int y[])
 
 int main(int argc, char* argv[]) {
 	//init knotList
-	for (int i = 0; i <= N+K+1; i++) {	//to make it clamped we need to set beg (K) digits and end (K) digits to 0 and 1.
-		knotList[i] = 1.0f*(i/(N+K+1.0f));
+	float knotListSize = (N-1)+K+2;
+	printf("knotList %f\n", knotListSize);
+	for (int i = 0; i < (int)knotListSize; i++) {	//to make it clamped we need to set beg (K) digits and end (K) digits to 0 and 1.
+		//knotList[i] = 1.0f*(i/(knotListSize-1));
 		///*	//uncomment for clamped
-		if (i < K-1) {
+		if (i < K+1) {
 			knotList[i] = 0.0f;
-		} else if (i > N+2) {
+		} else if (i >= (knotListSize-1)-(K)) {
 			knotList[i] = 1.0f;
 		} else {
 			//k[i] = 1.0f*(i/(N+K+1.0f));
-			knotList[i] = 1.0f*((i-K+2)/(float)((N+K+5)-(2*K)));
-			printf("val is %d\n", 1+i-K);
+			knotList[i] = 1.0f*((i-K)/(float)((knotListSize+1)-(2*(K+1))));
+			printf("val is %d\n", (knotListSize+1)-(2*(K+1)));
 		}
 		//*/
-		//printf("%f\n", knotList[i]);
+		printf("knotList[%d] is %f\n", i, knotList[i]);
 	}
 	/*
 			function to create a window and default renderer.
